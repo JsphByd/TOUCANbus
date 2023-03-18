@@ -20,7 +20,7 @@ This is a tool to automate the usage of can-utils and turn pentesting into a str
 4. Deeper understanding of the CAN Bus protocal
 ---------------------------------------------------------------
 # Native Usage:
-In order to deploy and use this tool all that is needed is the python file, once run the python file will install all of its needed dependencies and create needed folders. It should be able to run on any distro of Kali Linux that it is put on.
+* In order to deploy and use this tool all that is needed is the python file, once run the python file will install all of its needed dependencies and create needed folders. It should be able to run on any distro of Kali Linux that it is put on.
 ---------------------------------------------------------------
 # Hardware Required:
 1. https://www.8devices.com/products/usb2can_korlan
