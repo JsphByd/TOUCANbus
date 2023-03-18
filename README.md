@@ -3,7 +3,7 @@
 This is a tool to automate the usage of can-utils and turn pentesting into a streamlined process
 
 ---------------------------------------------------------------
-Capabillities:
+Capabillities:\n
 [1] Record CAN Bus Data and dump the output into a log file specified by the user
 [2] Dump live CAN Data into the terminal to monitor live CAN Bus activity and traffic
 [3] Select and equipt CAN Bus log files for attacks and parsing 
