@@ -1,8 +1,3 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://worldanimalfoundation.org/wp-content/uploads/2023/02/Toucan-p10-review.jpg"
-  <source media="(prefers-color-scheme: light)" srcset="https://worldanimalfoundation.org/wp-content/uploads/2023/02/Toucan-p10-review.jpg"
-</picture>
-
 # TOUCANBus
 
 This is a tool to automate the usage of can-utils and turn pentesting into a streamlined process
