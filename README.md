@@ -29,6 +29,7 @@ In order to deploy and use this tool all that is needed is the python file, once
 ---------------------------------------------------------------
 # Setup:
 ##  Headless:
-* Download RaspAP on a raspberry pi setup an ssh connection and use this script for remote can bus interaction
+* Download RaspAP[^1] on a raspberry pi setup an ssh connection and use this script for remote can bus interaction
 ##  Computer:
 *    Plug the usb2can into the computer and have fun :)
+[^1]: https://github.com/RaspAP/raspap-webgui
