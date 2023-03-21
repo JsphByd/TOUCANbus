@@ -128,6 +128,7 @@ def canFilter(canFile, bitRate, pluggedIn):
 			
 	choice = input("\n [1] Manual Filters \n [2] Load Filters from File \n [3] Filter Help \n [4] Reset Filter \n [B] Back \n\n Enter your choice: ")
 	filterValues = 'NONE'
+	log_files = {}
 	while choice != 'B':
 		if(int(choice) == 1):
 			os.system("clear")
@@ -151,7 +152,15 @@ def canFilter(canFile, bitRate, pluggedIn):
 		elif(int(choice) == 2):
 			files = os.listdir()
 
-			log_files = {}
+			os.system("clear")
+			print("\n\n\n                ,-,---.\n             __/( ,----`\n         _,-'    ;\n       ;;.---..-'\n              ,")
+			print("+------------------------+")
+			print("|  TOUCANbus automation  |")
+			print("|  v.1      |   \033[38;5;27mIDLE\033[0m     |")
+			print("+------------------------+")
+			status(canFile, bitRate, pluggedIn)
+			print("\n+========Filters=========+")
+
 			i = 0
 			for filename in files:
 				if filename.endswith(".txt") and os.path.isfile(filename):
@@ -159,28 +168,19 @@ def canFilter(canFile, bitRate, pluggedIn):
 					i += 1
 
 			for key in log_files.keys():
-					os.system("clear")
-					print("\n\n\n                ,-,---.\n             __/( ,----`\n         _,-'    ;\n       ;;.---..-'\n              ,")
-					print("+------------------------+")
-					print("|  TOUCANbus automation  |")
-					print("|  v.1      |   \033[38;5;27mIDLE\033[0m     |")
-					print("+------------------------+")
-					status(canFile, bitRate, pluggedIn)
-					print("\n+========Filters=========+")
-					print("\n[" + str(key) + "] " + log_files[key])
 
-					try:
-						fileName = int(input("\nSelect Filter: "))
-						filePointer = open(log_files[fileName],'r')
-						filterValues = filePointer.read()
-					except KeyError:
-						print("INVALID KEY OPTION")
-#canFilter(canFile, bitRate, pluggedIn)				#Needs reworked 
-					except FileNotFoundError:
-						print("INVALID FILENAME")
-#canFilter(canFile,bitRate,pluggedIn)				#Needs reworked
-					print(filterValues)
-					return filterValues			
+					print("[" + str(key) + "] " + log_files[key])
+
+			try: #There's a logic issue here :(
+				fileName = int(input("\nSelect Filter: "))
+				filePointer = open(log_files[fileName],'r')
+				filterValues = filePointer.read()
+			except KeyError:
+				print("INVALID KEY OPTION") 
+			except FileNotFoundError:
+				print("INVALID FILENAME")
+					
+			return filterValues			
 		elif(int(choice) == 3):
 
 			print("\n- Filters are always placed at the end of the candump command after the interface.\n\t Example: candump -l can0,128:7FF \n - Commands should \
