@@ -1,6 +1,8 @@
-![toucan](./images/toucan.png)
-
-# TOUCANBus
+<h1 align="center">
+  <br>
+  <a href="https://github.com/her3ticAVI/TOUCANBus"><img src="./images/toucanbus.png" alt="toucan"></a>
+  <br>
+</h1>
 
 This is a tool to automate the usage of can-utils and turn pentesting Car CANBUS into a streamlined process.
 
