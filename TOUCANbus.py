@@ -2,373 +2,404 @@ import os
 import time
 import signal
 import subprocess
+import sys
 import random
 
+# --- COLOR PALETTE & STYLING ---
+class Color:
+    HEADER = '\033[95m'
+    BLUE = '\033[94m'
+    CYAN = '\033[96m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    MAGENTA = '\033[35m'
+    RESET = '\033[0m'
+    BOLD = '\033[1m'
+    DIM = '\033[2m'
+    BG_DARK = '\033[40m'
+
+def clear_screen():
+    os.system("clear" if os.name == "posix" else "cls")
+
 def error(message):
-		print("\n\n[\033[31mERROR\033[0m] "+ message)
+    print(f"\n{Color.RED}{Color.BOLD}[!] ERROR:{Color.RESET} {Color.RED}{message}{Color.RESET}")
 
-def status(canFile, bitRate, pluggedIn):
-	print("       Bit Rate: \033[32m" + bitRate + "\033[0m")
-	print("Loaded CAN file: \033[32m" + canFile + "\033[0m")
-	if pluggedIn == 1:
-		print("     CAN Device: \033[92mFOUND\033[0m")
-	else:
-		print("     CAN Device: \033[91mNOT FOUND\033[0m")
+def dashboard_banner(status_mode="IDLE"):
+    mode_color = Color.GREEN if status_mode == "RECORDING" else (Color.RED if status_mode == "ATTACK" else Color.CYAN)
+    print(f"""{Color.CYAN}
+▐▓▓▓▓▓▌▐▓▓▓▓▌▐▓▌▐▓▌▐▓▓▓▓▌▐▓▓▓▓▌▐▓▌ ▐▓▌▐▓▓▓▓▌ ▐▓▌▐▓▌▐▓▓▓▓▌
+  ▐▓▌  ▐▓▌▐▓▌▐▓▌▐▓▌▐▓▌   ▐▓▌▐▓▌▐▓▓▌▐▓▌▐▓▌ ▐▓▌▐▓▌▐▓▌▐▓▌   
+  ▐▓▌  ▐▓▌▐▓▌▐▓▌▐▓▌▐▓▌   ▐▓▓▓▓▌▐▓▐▓▐▓▌▐▓▓▓▓▓▌▐▓▌▐▓▌▐▓▓▓▓▌
+  ▐▓▌  ▐▓▌▐▓▌▐▓▌▐▓▌▐▓▌   ▐▓▌▐▓▌▐▓▌▐▓▓▌▐▓▌ ▐▓▌▐▓▌▐▓▌   ▐▓▌
+  ▐▓▌  ▐▓▓▓▓▌▐▓▓▓▓▌▐▓▓▓▓▌▐▓▌▐▓▌▐▓▌ ▐▓▌▐▓▓▓▓▌ ▐▓▓▓▓▌▐▓▓▓▓▌
+                     AUTOMATION SUITE v3.1 [{mode_color}{status_mode}{Color.CYAN}]{Color.RESET}
+""")
 
-def help():
-	os.system("clear")
-	print("\n\n                          _                                     ")
-	print("                         ( ) Egg                                ")
-	print("+--------------------------------------------------------------+")
-	print("| This is a CANBus Tool designed by Ben Bowman and Joseph Boyd |")
-	print("| to help automate pentesting on cars because no other good    |")
-	print("| tools were on the market. The current usage is to record     |")
-	print("| with the 1. Once the log file is recorded you must           |")
-	print("| select the log file with the 2 option and then click 3 to    |")
-	print("| replay the entire log file back into the can bus             |")
-	print("+--------------------------------------------------------------+")
-	input("\n[ENTER] to Return")
+def status_panel(canFile, bitRate, pluggedIn, activeFilter, activeDbc):
+    device_status = f"{Color.GREEN}{Color.BOLD}● ONLINE{Color.RESET}" if pluggedIn == 1 else f"{Color.RED}{Color.BOLD}● OFFLINE{Color.RESET}"
+    
+    print(f"{Color.DIM}┌───────────────────────────── SYSTEM STATUS ──────────────────────────────┐{Color.RESET}")
+    print(f"│  {Color.BOLD}Bitrate:{Color.RESET} {Color.YELLOW}{bitRate:<12}{Color.RESET}  │  {Color.BOLD}CAN Device:{Color.RESET} {device_status:<17}  │")
+    print(f"│  {Color.BOLD}Log File:{Color.RESET} {Color.CYAN}{str(canFile)[:15]:<13}{Color.RESET}  │  {Color.BOLD}Filter Profile:{Color.RESET} {Color.MAGENTA}{str(activeFilter)[:12]:<13}{Color.RESET}  │")
+    print(f"│  {Color.BOLD}DBC Profile:{Color.RESET} {Color.BLUE}{str(activeDbc)[:13]:<12}{Color.RESET}  │                                           │")
+    print(f"{Color.DIM}└──────────────────────────────────────────────────────────────────────────┘{Color.RESET}")
 
-def playCode(canFile, bitRate, pluggedIn):
-	os.system("clear")
-	
-	print("\n\n              ,-,---.    ")
-	print("             /( ,----`   ")
-	print("         ____) (____     ")
-	print("       //'--;   ;--'\\   ")
-	print("      ///////\_/\\\\\\\  ")
-	print("             m m		")
-	print("+------------------------+")
-	print("|  TOUCANbus automation  |")
-	print("|  v.1      |   \033[38;5;196mATTACK\033[0m   |")
-	print("+------------------------+")
-	status(canFile, bitRate, pluggedIn)
-	indCode = input(" Enter CAN Code: ")
-	print("\nReplaying Code", end="")
+def help_menu():
+    clear_screen()
+    dashboard_banner("HELP")
+    print(f"{Color.BOLD}=== TOUCANBus Comprehensive Guide ==={Color.RESET}")
+    print(f" {Color.CYAN}[1]{Color.RESET} Record Traffic : Captures live SocketCAN frames into a log file.")
+    print(f" {Color.CYAN}[2]{Color.RESET} Dump CAN       : Real-time packet analysis using cansniffer.")
+    print(f" {Color.CYAN}[3]{Color.RESET} Log Manager    : Switch between recorded session files.")
+    print(f" {Color.CYAN}[4]{Color.RESET} Parser/Decoder : Search IDs, strip traffic, or decode with DBC.")
+    print(f" {Color.CYAN}[5]{Color.RESET} Replay Log     : Transmit recorded logs back onto the bus via canplayer.")
+    print(f" {Color.CYAN}[6]{Color.RESET} Fuzzer Suite   : Automated payload and UDS service brute-forcing.")
+    print(f" {Color.CYAN}[7]{Color.RESET} Custom Frame   : Send a single manual CAN payload.")
+    print(f" {Color.CYAN}[8]{Color.RESET} Filters        : Apply custom SocketCAN masking rules.")
+    print(f" {Color.CYAN}[9]{Color.RESET} DBC Profiles   : Load signal definitions for human translation.")
+    input(f"\n{Color.YELLOW}[PRESS ENTER TO RETURN TO DASHBOARD]{Color.RESET}")
 
-	for i in range(10):
-		time.sleep(0.5)
-		print(".", end="", flush=True)
-	os.system("cansend can0 "+ indCode)
+def check_can_device():
+    try:
+        result = subprocess.run(["ifconfig"], capture_output=True, text=True)
+        return 1 if "can0" in result.stdout else 0
+    except Exception:
+        return 0
 
-def fileParse(canFile, bitRate, pluggedIn):
-	errorThree = "Invalid Option"
-	os.system("clear")
-	print("\n\n\n                ,-,---.\n             __/( ,----`\n         _,-'    ;\n       ;;.---..-'\n              ,")
-	print("+------------------------+")
-	print("|  TOUCANbus automation  |")
-	print("|  v.1      |   \033[38;5;27mIDLE\033[0m     |")
-	print("+------------------------+")
-	print("       Bit Rate: \033[32m" + bitRate + "\033[0m")
-	print("Loaded CAN file: \033[32m" + canFile + "\033[0m")
-	if pluggedIn == 1:
-		print("     CAN Device: \033[92mFOUND\033[0m\n")
-	else:
-		print("     CAN Device: \033[91mNOT FOUND\033[0m\n")
-	print("     1         2     3     4 ")
-	print("(000.000000)  can0  0XX   [0]  00 00 00 00 00 00 00 00\n")
-	portion = 0
-	while portion != "Q":
-		portion = input("Enter Number to Remove Portion (Q to Quit): ") 
-		if portion == "1":
-			print("hi")
-		elif portion == "2":
-			os.system("grep -v "+ can +" " + canFile + " > new.log")
-			os.system("cp new.log " + canFile)
-			os.system("rm new.log") 
-		elif portion == "3":
-			print("Good")
-		elif portion == "4":
-			print("Good")
-		else:
-			error(errorThree)
-	
-def canFiles(canFile, bitRate, pluggedIn):
-	os.system("clear")
-	print("\n\n\n                ,-,---.\n             __/( ,----`\n         _,-'    ;\n       ;;.---..-'\n              ,")
-	print("+------------------------+")
-	print("|  TOUCANbus automation  |")
-	print("|  v.1      |   \033[38;5;27mIDLE\033[0m     |")
-	print("+------------------------+")
-	status(canFile, bitRate, pluggedIn)
-	print("\n")
-	files = os.listdir("logs")
+def play_code(canFile, bitRate, pluggedIn, activeFilter, activeDbc):
+    clear_screen()
+    dashboard_banner("ATTACK")
+    status_panel(canFile, bitRate, pluggedIn, activeFilter, activeDbc)
+    indCode = input(f"\n{Color.BOLD} Enter CAN Code (e.g., 123#00010203): {Color.RESET}")
+    print(f"\n{Color.YELLOW}[*] Transmitting custom payload...", end="")
+    
+    for _ in range(4):
+        time.sleep(0.2)
+        print(".", end="", flush=True)
+    
+    try:
+        subprocess.run(["cansend", "can0", indCode], check=True)
+        print(f" {Color.GREEN}{Color.BOLD}[SUCCESS]{Color.RESET}")
+    except subprocess.CalledProcessError:
+        error("Transmission failed. Verify interface state.")
+    time.sleep(1.2)
 
-	log_files = {}
-	i = 0
-	for filename in files:
-		if filename.endswith(".log") and os.path.isfile("logs/" + filename):
-			log_files[i] = filename
-			i += 1
+def parse_dbc(dbc_path):
+    messages = {}
+    if not os.path.exists(dbc_path):
+        return messages
+    try:
+        with open(dbc_path, 'r') as f:
+            for line in f:
+                if line.startswith("BO_ "):
+                    parts = line.strip().split()
+                    can_id_dec = int(parts[1])
+                    msg_name = parts[2].rstrip(":")
+                    messages[f"{can_id_dec:X}"] = msg_name
+    except Exception:
+        pass
+    return messages
 
-	for key in log_files.keys():
-		print("[" + str(key) + "] " + log_files[key])
-	print("[B] Back\n")
-	
-	try:    
-		selection = input("Select Number: ")
-		if selection == "B":
-			return "\033[91mNONE\033[0m"
-		else:
-			return log_files[int(selection)]
-	except KeyError:
-		error(errorTwo)
-		time.sleep(2)
-		return "\033[91mNONE\033[0m"
+def file_parse(canFile, bitRate, pluggedIn, activeFilter, activeDbc):
+    clear_screen()
+    dashboard_banner("PARSER")
+    status_panel(canFile, bitRate, pluggedIn, activeFilter, activeDbc)
+    
+    log_path = os.path.join("logs", canFile)
+    if not os.path.exists(log_path):
+        error("Selected log file not found.")
+        time.sleep(1.5)
+        return
 
-def canFilter(canFile, bitRate, pluggedIn):
-	errorThree = "Invalid Option"	
-	os.system("clear")
-	print("\n\n\n                ,-,---.\n             __/( ,----`\n         _,-'    ;\n       ;;.---..-'\n              ,")
-	print("+------------------------+")
-	print("|  TOUCANbus automation  |")
-	print("|  v.1      |   \033[38;5;27mIDLE\033[0m     |")
-	print("+------------------------+")
-	status(canFile, bitRate, pluggedIn)
-			
-	choice = input("\n [1] Manual Filters \n [2] Load Filters from File \n [3] Filter Help \n [4] Reset Filter \n [B] Back \n\n Enter your choice: ")
-	filterValues = 'NONE'
-	log_files = {}
-	while choice != 'B':
-		if(int(choice) == 1):
-			os.system("clear")
-			print("\n\n\n                ,-,---.\n             __/( ,----`\n         _,-'    ;\n       ;;.---..-'\n              ,")
-			print("+------------------------+")
-			print("|  TOUCANbus automation  |")
-			print("|  v.1      |   \033[38;5;27mIDLE\033[0m     |")
-			print("+------------------------+")
-			status(canFile, bitRate, pluggedIn)
-			fileName = input("\nInput String configuration file name: ")
-			fileName += ".txt"
+    print(f"\n {Color.BOLD}LOG PARSING OPERATIONS:{Color.RESET}")
+    print(f"   {Color.GREEN}[1]{Color.RESET} Search/Filter CAN ID")
+    print(f"   {Color.GREEN}[2]{Color.RESET} Strip/Remove CAN ID from Log")
+    print(f"   {Color.GREEN}[3]{Color.RESET} Decode with Active DBC Profile")
+    print(f"   {Color.RED}[Q]{Color.RESET} Return to Dashboard")
+    
+    choice = input(f"\n{Color.YELLOW}Select Action > {Color.RESET}").strip().upper()
+    if choice == "1":
+        search_id = input("Enter CAN ID to search (e.g., 123): ").strip()
+        print(f"\n{Color.CYAN}--- Search Results for ID: {search_id} ---{Color.RESET}")
+        with open(log_path, 'r') as f:
+            lines = [line for line in f if search_id.lower() in line.lower()]
+            for line in lines[:20]:
+                print(line.strip())
+            print(f"\nTotal matching frames: {len(lines)}")
+        input(f"\n{Color.YELLOW}[PRESS ENTER TO CONTINUE]{Color.RESET}")
+    elif choice == "2":
+        remove_id = input("Enter CAN ID to strip: ").strip()
+        temp_file = "logs/temp.log"
+        with open(log_path, 'r') as infile, open(temp_file, 'w') as outfile:
+            for line in infile:
+                if remove_id.lower() not in line.lower():
+                    outfile.write(line)
+        os.replace(temp_file, log_path)
+        print(f"{Color.GREEN}[+] Log file successfully filtered and updated!{Color.RESET}")
+        time.sleep(1.5)
+    elif choice == "3":
+        dbc_map = parse_dbc(os.path.join("dbc", activeDbc)) if activeDbc != "NONE" else {}
+        print(f"\n{Color.CYAN}--- DBC Signal Translation ---{Color.RESET}")
+        with open(log_path, 'r') as f:
+            count = 0
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) >= 3:
+                    can_id = parts[2]
+                    decoded_name = dbc_map.get(can_id, "UNKNOWN_SIGNAL")
+                    print(f" ID: {can_id:<6} │ Signal: {decoded_name:<18} │ Raw: {line.strip()}")
+                    count += 1
+                    if count >= 25:
+                        print(f"{Color.DIM}... (Truncated to first 25 entries){Color.RESET}")
+                        break
+        input(f"\n{Color.YELLOW}[PRESS ENTER TO CONTINUE]{Color.RESET}")
 
-			print("\n\033[33m [!]\033[0m Filter String is appended to the end of candump -l can0 command, only input a comma separated list of filters using the syntax in the filter help menu\n")
-			filterStr = input("Input Filter String: ")
+def can_files(canFile, bitRate, pluggedIn, activeFilter, activeDbc):
+    clear_screen()
+    dashboard_banner("LOG SELECTOR")
+    status_panel(canFile, bitRate, pluggedIn, activeFilter, activeDbc)
+    
+    if not os.path.exists("logs"):
+        os.makedirs("logs")
+        
+    files = [f for f in os.listdir("logs") if f.endswith(".log")]
+    if not files:
+        print(f"\n{Color.YELLOW}[!] No log files available in 'logs/' directory.{Color.RESET}")
+        input(f"\n{Color.YELLOW}[PRESS ENTER TO CONTINUE]{Color.RESET}")
+        return canFile
 
-			filePointer = open(fileName, 'w')
-			filePointer.write(filterStr)
-			filePointer.close()
-			canFilter(canFile, bitRate, pluggedIn)
-			
-		elif(int(choice) == 2):
-			files = os.listdir()
+    print(f"\n {Color.BOLD}AVAILABLE LOG FILES:{Color.RESET}")
+    log_files = {i: f for i, f in enumerate(files)}
+    for k, v in log_files.items():
+        print(f"   {Color.CYAN}[{k}]{Color.RESET} {v}")
+    print(f"   {Color.RED}[B]{Color.RESET} Back")
+    
+    selection = input(f"\n{Color.YELLOW}Select Log Index > {Color.RESET}").strip().upper()
+    if selection == "B":
+        return canFile
+    try:
+        return log_files[int(selection)]
+    except (ValueError, KeyError):
+        error("Invalid index selection.")
+        time.sleep(1)
+        return canFile
 
-			os.system("clear")
-			print("\n\n\n                ,-,---.\n             __/( ,----`\n         _,-'    ;\n       ;;.---..-'\n              ,")
-			print("+------------------------+")
-			print("|  TOUCANbus automation  |")
-			print("|  v.1      |   \033[38;5;27mIDLE\033[0m     |")
-			print("+------------------------+")
-			status(canFile, bitRate, pluggedIn)
-			print("\n+========Filters=========+")
+def record_can(canFile, bitRate, pluggedIn, filterConfig, activeDbc):
+    clear_screen()
+    dashboard_banner("RECORDING")
+    status_panel(canFile, bitRate, pluggedIn, filterConfig, activeDbc)
+    
+    file_name = input(f"\n{Color.YELLOW}Enter Session Filename (no extension) > {Color.RESET}").strip()
+    if not file_name:
+        file_name = "capture"
+    file_name += ".log"
+    
+    print(f"\n{Color.RED}{Color.BOLD}[!] RECORDER LIVE: Press 'Q' then ENTER to terminate session.{Color.RESET}\n")
+    
+    cmd = ["candump", "-l", "can0"]
+    if filterConfig != "NONE":
+        cmd = ["candump", "-l", f"can0,{filterConfig}"]
+        
+    recorder = subprocess.Popen(cmd)
+    
+    try:
+        while True:
+            if input().strip().lower() == 'q':
+                break
+    except KeyboardInterrupt:
+        pass
+    
+    recorder.terminate()
+    recorder.wait()
+    
+    os.system(f"find . -type f -name 'candump*' -exec cp {{}} logs/{file_name} \;")
+    os.system("find . -type f -name 'candump*' -delete")
+    print(f"{Color.GREEN}[+] Capture saved successfully as '{file_name}'!{Color.RESET}")
+    time.sleep(1.5)
 
-			i = 0
-			for filename in files:
-				if filename.endswith(".txt") and os.path.isfile(filename):
-					log_files[i] = filename
-					i += 1
+def find_code(canFile, bitRate, pluggedIn, activeFilter, activeDbc):
+    clear_screen()
+    dashboard_banner("FUZZER SUITE")
+    status_panel(canFile, bitRate, pluggedIn, activeFilter, activeDbc)
+    print(f"\n{Color.YELLOW}{Color.BOLD}[!] WARNING: Fuzzing triggers rapid state changes on vehicle buses.{Color.RESET}")
+    
+    print(f"\n {Color.BOLD}SELECT ATTACK VECTOR:{Color.RESET}")
+    print(f"   {Color.MAGENTA}[1]{Color.RESET} Incremental Byte Fuzzer")
+    print(f"   {Color.MAGENTA}[2]{Color.RESET} Random Entropy Payload Fuzzer")
+    print(f"   {Color.MAGENTA}[3]{Color.RESET} UDS Service ID Brute-forcer")
+    print(f"   {Color.RED}[B]{Color.RESET} Back")
+    
+    mode = input(f"\n{Color.YELLOW}Select Mode > {Color.RESET}").strip().upper()
+    if mode == "B":
+        return
 
-			for key in log_files.keys():
+    target_id = input("Enter Target CAN ID (e.g., 7E0): ").strip()
+    if not target_id:
+        return
+        
+    confirm = input(f"Confirm execution on ID [{target_id}]? (y/N): ").strip().lower()
+    if confirm != 'y':
+        return
+        
+    print(f"\n{Color.RED}[*] Attack payload stream initialized... Press Ctrl+C to abort.{Color.RESET}")
+    try:
+        if mode == "1":
+            for byte1 in range(0, 256):
+                payload = f"{target_id}#01{byte1:02X}000000000000"
+                subprocess.run(["cansend", "can0", payload], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                sys.stdout.write(f"\r[SENDING] {payload}")
+                sys.stdout.flush()
+                time.sleep(0.005)
+        elif mode == "2":
+            while True:
+                rand_bytes = "".join([f"{random.randint(0, 255):02X}" for _ in range(8)])
+                payload = f"{target_id}#{rand_bytes}"
+                subprocess.run(["cansend", "can0", payload], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                sys.stdout.write(f"\r[SENDING] {payload}")
+                sys.stdout.flush()
+                time.sleep(0.01)
+        elif mode == "3":
+            for sid in range(0x10, 0x40):
+                payload = f"{target_id}#02{sid:02X}000000000000"
+                subprocess.run(["cansend", "can0", payload], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                sys.stdout.write(f"\r[TESTING UDS] SID: {sid:02X}")
+                sys.stdout.flush()
+                time.sleep(0.05)
+    except KeyboardInterrupt:
+        print(f"\n{Color.GREEN}[+] Fuzzing halted safely by operator.{Color.RESET}")
+    input(f"\n{Color.YELLOW}[PRESS ENTER TO CONTINUE]{Color.RESET}")
 
-					print("[" + str(key) + "] " + log_files[key])
+def manage_filters(canFile, bitRate, pluggedIn, activeFilter, activeDbc):
+    clear_screen()
+    dashboard_banner("FILTERS")
+    status_panel(canFile, bitRate, pluggedIn, activeFilter, activeDbc)
+    
+    print(f"\n {Color.BOLD}SOCKETCAN FILTER CONFIGURATION:{Color.RESET}")
+    print(f"   {Color.CYAN}[1]{Color.RESET} Set Custom Filter Pattern (e.g., 128:7FF)")
+    print(f"   {Color.CYAN}[2]{Color.RESET} Clear / Reset Filter Rules")
+    print(f"   {Color.RED}[B]{Color.RESET} Back")
+    
+    choice = input(f"\n{Color.YELLOW}Select Option > {Color.RESET}").strip().upper()
+    if choice == "1":
+        f_str = input("Enter rule pattern (<canID>:<mask>) > ").strip()
+        if f_str:
+            return f_str
+    elif choice == "2":
+        return "NONE"
+    return activeFilter
 
-			try: #There's a logic issue here :(
-				fileName = int(input("\nSelect Filter: "))
-				filePointer = open(log_files[fileName],'r')
-				filterValues = filePointer.read()
-			except KeyError:
-				print("INVALID KEY OPTION") 
-			except FileNotFoundError:
-				print("INVALID FILENAME")
-					
-			return filterValues			
-		elif(int(choice) == 3):
+def manage_dbc(activeDbc):
+    clear_screen()
+    dashboard_banner("DBC PROFILES")
+    
+    if not os.path.exists("dbc"):
+        os.makedirs("dbc")
+        
+    files = [f for f in os.listdir("dbc") if f.endswith(".dbc")]
+    if not files:
+        print(f"\n{Color.YELLOW}[!] No DBC database files found in 'dbc/' directory.{Color.RESET}")
+        print("Drop standard .dbc files into the 'dbc/' folder to load profiles.")
+        input(f"\n{Color.YELLOW}[PRESS ENTER TO CONTINUE]{Color.RESET}")
+        return activeDbc
 
-			print("\n- Filters are always placed at the end of the candump command after the interface.\n\t Example: candump -l can0,128:7FF \n - Commands should \
-				  follow the following format : <canID>:<mask>\n\tuse mask 7FF to filter for an exact match\n - : correlates ==, ~ correlates to != ")
-			input("\n[ENTER] to continue\n")
-		elif(int(choice) == 4):
-			return "NONE"
-		elif(choice == "B"):
-			return
-		else:
-			error(errorThree)
-			time.sleep(2)
-			return
+    print(f"\n {Color.BOLD}LOADED DBC PROFILES:{Color.RESET}")
+    dbc_files = {i: f for i, f in enumerate(files)}
+    for k, v in dbc_files.items():
+        print(f"   {Color.BLUE}[{k}]{Color.RESET} {v}")
+    print(f"   {Color.RED}[B]{Color.RESET} Back")
+    
+    selection = input(f"\n{Color.YELLOW}Select Profile Index > {Color.RESET}").strip().upper()
+    if selection == "B":
+        return activeDbc
+    try:
+        return dbc_files[int(selection)]
+    except (ValueError, KeyError):
+        error("Invalid index.")
+        time.sleep(1)
+        return activeDbc
 
-def recordCan(canFile, bitRate, pluggedIn, filterConfigurations):
-	os.system("clear")
-	print("\n\n\n                ,-,---.\n       \033[38;5;226m) ) )\033[0m __/( ,----` \033[38;5;226m( ( (\033[0m\n         _,-'    ;\n       ;;.---..-'\n              ,")
-	print("+------------------------+")
-	print("|  TOUCANbus automation  |")
-	print("|  v.1      |  \033[38;5;226mRECORDING\033[0m |")
-	print("+------------------------+")
-	status(canFile, bitRate, pluggedIn)
-	run = False
-	runAsk = 'j'
-
-	fileName = input(" Input Filename: ")
-	fileName += ".log"
-	print("\033[31m     [Press Q to stop]\033[0m")
-
-	if filterConfigurations != "NONE":
-		recorder = subprocess.Popen(["candump","-l","can0"+filterConfigurations])
-	else:
-		recorder = subprocess.Popen(["candump","-l","can0"])
-
-
-	pid = recorder.pid
-
-	while run == False:
-		if runAsk == 'q' or runAsk == 'Q':
-			run = True
-			os.kill(pid, signal.SIGTERM)
-		else:
-			runAsk = input("")
-			
-	os.system("find . -type f -name 'candump*' -exec cp {} logs/" + fileName + " \;")
-	os.system("find -type f -name 'candump*' -delete")
-	print("File Created Successfully!")
-		
-def dumpCan(canFile, bitRate, pluggedIn):
-	os.system("clear")
-	os.system("cansniffer -c can0")
-
-def playFile(canFile, bitRate, pluggedIn):
-	os.system("clear")
-	
-	print("\n\n              ,-,---.    ")
-	print("             /( ,----`   ")
-	print("         ____) (____     ")
-	print("       //'--;   ;--'\\   ")
-	print("      ///////\_/\\\\\\\  ")
-	print("             m m		")
-	print("+------------------------+")
-	print("|  TOUCANbus automation  |")
-	print("|  v.1      |   \033[38;5;196mATTACK\033[0m   |")
-	print("+------------------------+")
-	status(canFile, bitRate, pluggedIn)
-	print("\nReplaying Codes", end="")
-
-	for i in range(10):
-		time.sleep(0.5)
-		print(".", end="", flush=True)
-	os.system("cd logs && canplayer -I "+ canFile)
-	
 def main():
+    if os.geteuid() != 0:
+        print(f"{Color.YELLOW}[!] Notice: Running without root/sudo privileges may restrict CAN operations.{Color.RESET}")
 
-	os.system("apt-get install can-utils")
-	if not os.path.exists("logs"):
-		os.makedirs("logs")
-	if not os.path.exists("filters"):
-		os.makedirs("filters")
-	if not os.path.exists("checks"):
-		os.makedirs("checks")
-	#------------------ERROR MESSAGES------------------
-	errorOne = "Please select a valid CAN File"
-	errorThree = "Invalid Option"
-	errorTwo = "No CAN File Selected"
-	errorSix = "Please Plug in CAN Device"
-	#----------------END ERROR MESSAGES----------------
-	os.system("clear")
-	bitRate = input("Enter desired Bitrate (default: 500000): ")
-	if bitRate == "":
-			bitRate = "500000"
-	filterConfigurations = "NONE"
-	os.system("sudo ip link set can0 up type can bitrate "+ bitRate)
-	os.system("sudo ifconfig can0 txqueuelen 1000")
-	os.system("clear")
-	canFile = ("\033[91mNONE\033[0m")
+    for d in ["logs", "filters", "checks", "dbc"]:
+        if not os.path.exists(d):
+            os.makedirs(d)
 
-	while True:
-		os.system("cd checks && ifconfig | grep -o 'can0' > checkDevice.txt")
-		with open('checks/checkDevice.txt', 'r') as file:
-			file_contents = file.read()
-			if "can0" in file_contents:
-				pluggedIn = 1
-			else:
-				pluggedIn = 0
-			
-		os.system("clear")
-		print("\n\n\n                ,-,---.\n             __/( ,----`\n         _,-'    ;\n       ;;.---..-'\n              ,")
-		print("+------------------------+")
-		print("|  TOUCANbus automation  |")
-		print("|  v.1      |   \033[38;5;27mIDLE\033[0m     |")
-		print("+------------------------+")
-		status(canFile, bitRate, pluggedIn)
-		print("ADD FILTER SELECTED HERE")
-		print("\n [1] Record CAN \n [2] Dump CAN \n [3] CAN files \n [4] Parse File - Ben \n [5] Play file \n [6] Find Code - Ben and Joe\n [7] Play Specific Code \n [8] Filter - JOE \n [9] Help \n [R] Refresh \n [B] Exit \n")
-		choice = input("Enter your choice: ")
+    clear_screen()
+    dashboard_banner("INIT")
+    bitRate = input(f"{Color.YELLOW}Enter desired bus bitrate [Default: 500000] > {Color.RESET}").strip()
+    if not bitRate:
+        bitRate = "500000"
+        
+    os.system(f"sudo ip link set can0 up type can bitrate {bitRate} 2>/dev/null")
+    os.system("sudo ifconfig can0 txqueuelen 1000 2>/dev/null")
+    
+    canFile = f"{Color.RED}NONE{Color.RESET}"
+    filterConfig = "NONE"
+    activeDbc = "NONE"
 
-		if pluggedIn == 1:
-			if choice == "1":
-				recordCan(canFile, bitRate, pluggedIn, filterConfigurations)
-			elif choice == "2":
-				dumpCan(canFile, bitRate, pluggedIn)
-			elif choice == "3":
-				canFile = canFiles(canFile, bitRate, pluggedIn)
-			elif choice == "4":
-				if canFile == "\033[91mNONE\033[0m":
-					error(errorOne)
-					time.sleep(2)
-				else:
-					fileParse(canFile, bitRate, pluggedIn)
-			elif choice == "5":
-				if canFile == "\033[91mNONE\033[0m":
-					error(errorOne)
-					time.sleep(2)
-				else:
-					playFile(canFile, bitRate, pluggedIn)
-			elif choice == "6":
-				print("You chose Option 4.")
-			elif choice == "7":
-				playCode(canFile, bitRate, pluggedIn)
-			elif choice == "8":
-				canFilter(canFile, bitRate, pluggedIn)
-			elif choice == "9":
-				help()
-			elif choice =="R":
-				print("Refreshing...")
-			elif choice == "B":
-				print("Exiting the program...")
-				break
-			else:
-				error(errorThree)
-				time.sleep(2)
-		else:
-			if choice == "10":
-				help()
-			elif choice =="R":
-				os.system("cd checks && ifconfig | grep -o 'can0' > checkDevice.txt")
-				with open('checks/checkDevice.txt', 'r') as file:
-					file_contents = file.read()
-					if "can0" in file_contents:
-						pluggedIn = 1
-					else:
-						pluggedIn = 0
-			elif choice == "4":
-				if canFile == "\033[91mNONE\033[0m":
-					error(errorOne)
-					time.sleep(2)
-				else:
-					fileParse(canFile, bitRate, pluggedIn)
-			elif choice == "3":
-				canFile = canFiles(canFile, bitRate, pluggedIn)
-			elif choice == "8":
-				canFilter(canFile, bitRate, pluggedIn)
-			elif choice == "9":
-				help()
-			elif choice == "4":
-				if canFile == "\033[91mNONE\033[0m":
-					error(errorOne)
-					time.sleep(2)
-				else:
-					fileParse(canFile, bitRate, pluggedIn)
-			elif choice == "B":
-				print("Exiting the program...")
-				break
-			else:
-				error(errorSix)
-				time.sleep(2)
+    while True:
+        pluggedIn = check_can_device()
+        clear_screen()
+        dashboard_banner("IDLE")
+        status_panel(canFile, bitRate, pluggedIn, filterConfig, activeDbc)
+        
+        # Gorgeous Dual-Column Dashboard Grid
+        print(f"\n{Color.DIM}┌────────────────────────────── DASHBOARD MENU ────────────────────────────┐{Color.RESET}")
+        print(f"│  {Color.GREEN}[1]{Color.RESET} Record CAN Traffic       │  {Color.CYAN}[6]{Color.RESET} Automated Fuzzer Suite       │")
+        print(f"│  {Color.GREEN}[2]{Color.RESET} Dump CAN (cansniffer)    │  {Color.CYAN}[7]{Color.RESET} Play Specific CAN Code       │")
+        print(f"│  {Color.GREEN}[3]{Color.RESET} Select CAN Logs          │  {Color.MAGENTA}[8]{Color.RESET} Configure Bus Filters        │")
+        print(f"│  {Color.GREEN}[4]{Color.RESET} Parse & Decode Log       │  {Color.MAGENTA}[9]{Color.RESET} Load DBC Profile             │")
+        print(f"│  {Color.GREEN}[5]{Color.RESET} Replay Log File          │  {Color.BLUE}[H]{Color.RESET} Help Documentation           │")
+        print(f"│                             │  {Color.YELLOW}[R]{Color.RESET} Refresh Dashboard            │")
+        print(f"│                             │  {Color.RED}[B]{Color.RESET} Exit Suite                   │")
+        print(f"{Color.DIM}└──────────────────────────────────────────────────────────────────────────┘{Color.RESET}")
+        
+        choice = input(f"{Color.YELLOW} TOUCANBus > {Color.RESET}").strip().upper()
+        
+        if choice == "1":
+            if pluggedIn: record_can(canFile, bitRate, pluggedIn, filterConfig, activeDbc)
+            else: error("CAN interface 'can0' is offline!"); time.sleep(1.5)
+        elif choice == "2":
+            if pluggedIn: os.system("cansniffer -c can0")
+            else: error("CAN interface 'can0' is offline!"); time.sleep(1.5)
+        elif choice == "3":
+            canFile = can_files(canFile, bitRate, pluggedIn, filterConfig, activeDbc)
+        elif choice == "4":
+            if "NONE" in canFile: error("Please select a valid log file first!"); time.sleep(1.5)
+            else: file_parse(canFile, bitRate, pluggedIn, filterConfig, activeDbc)
+        elif choice == "5":
+            if "NONE" in canFile: error("Please select a valid log file first!"); time.sleep(1.5)
+            else:
+                clear_screen()
+                dashboard_banner("ATTACK")
+                status_panel(canFile, bitRate, pluggedIn, filterConfig, activeDbc)
+                print(f"\n{Color.YELLOW}[*] Replaying log session onto can0...{Color.RESET}")
+                time.sleep(1)
+                os.system(f"cd logs && canplayer -I {canFile}")
+                input(f"\n{Color.YELLOW}[PRESS ENTER TO CONTINUE]{Color.RESET}")
+        elif choice == "6":
+            if pluggedIn: find_code(canFile, bitRate, pluggedIn, filterConfig, activeDbc)
+            else: error("CAN interface 'can0' is offline!"); time.sleep(1.5)
+        elif choice == "7":
+            if pluggedIn: play_code(canFile, bitRate, pluggedIn, filterConfig, activeDbc)
+            else: error("CAN interface 'can0' is offline!"); time.sleep(1.5)
+        elif choice == "8":
+            filterConfig = manage_filters(canFile, bitRate, pluggedIn, filterConfig, activeDbc)
+        elif choice == "9":
+            activeDbc = manage_dbc(activeDbc)
+        elif choice == "H":
+            help_menu()
+        elif choice == "R":
+            continue
+        elif choice == "B":
+            print(f"\n{Color.CYAN}Shutting down TOUCANBus. Drive safely!{Color.RESET}\n")
+            break
+        else:
+            error("Invalid choice selected.")
+            time.sleep(1.2)
 
 if __name__ == "__main__":
-	main()
+    main()
