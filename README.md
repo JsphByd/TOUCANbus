@@ -1,35 +1,94 @@
-<h1 align="center">
-  <br>
-  <a href="https://github.com/her3ticAVI/TOUCANBus"><img src="./images/toucanbus.png" alt="toucan"></a>
-  <br>
-</h1>
+<div align="center">
 
-This is a tool to automate the usage of can-utils and turn pentesting Car CANBUS into a streamlined process.
+  <img src="./images/toucanbus.png" alt="TOUCANBus Logo" width="180" />
 
-## Capabillities:
-1. Record CAN Bus Data and dump the output into a log file specified by the user
-2. Dump live CAN Data into the terminal to monitor live CAN Bus activity and traffic
-3. Select and equipt CAN Bus log files for attacks and parsing 
-4. Parse Can Bus log Files to compare static recording to mutated recording to find can codes for specific actions 
-5. Play file back into the can bus, AKA replay attack
-6. Find specific Codes in a file that do specified things by process of elimination
-7. Play Specified Code selected by the user back into the can bus for more precise attacks 
-8. Filters that can be saved and loaded from a log file to filter out data during run-time
+  <h1>TOUCANBus</h1>
 
-## Use-Cases:
-1. Can be used for vehicular pentesting on and off the field
-2. Trouble shooting CAN bus error codes, check engine light, etc
-3. Party tricks such as remote control
-4. Deeper understanding of the CAN Bus protocal
+  <p><strong>An advanced, streamlined automation suite for automotive penetration testing and SocketCAN interaction.</strong></p>
 
-## Hardware Required:
-1. https://www.8devices.com/products/usb2can_korlan
-2. https://www.raspberrypi.com/
-3. Any sort of power supply.
+  <p>
+    <img src="https://img.shields.io/badge/Python-3.x-blue.svg?style=flat-square&logo=python&logoColor=white" alt="Python Version">
+    <img src="https://img.shields.io/badge/Platform-Linux%20%2F%20Raspberry%20Pi-orange.svg?style=flat-square&logo=linux&logoColor=white" alt="Platform">
+    <img src="https://img.shields.io/badge/License-MIT-green.svg?style=flat-square" alt="License">
+    <img src="https://img.shields.io/badge/Security-Automotive-red.svg?style=flat-square&logo=cisco&logoColor=white" alt="Security">
+  </p>
 
-## Setup:
-###  Headless:
-* Download RaspAP[^1] on a raspberry pi setup an ssh connection and use this script for remote can bus interaction
-###  Computer:
-*    Plug the usb2can into the computer and have fun :)
-[^1]: https://github.com/RaspAP/raspap-webgui
+</div>
+
+---
+
+## 📌 Overview
+
+**TOUCANBus** is a feature-rich, terminal-based dashboard designed to bridge the gap between complex `can-utils` commands and practical automotive security research. Built for field researchers, security professionals, and automotive engineers, it provides a clean, modular workflow for recording, filtering, parsing, decoding (via DBC files), and fuzzing CAN bus traffic.
+
+---
+
+## ✨ Key Capabilities
+
+| Feature | Description |
+| :--- | :--- |
+| **Live Recording & Filtering** | Capture live SocketCAN bus traffic into structured log files with real-time ID filtering. |
+| **Real-Time Diagnostics** | Monitor live CAN bus packets instantly using an integrated `cansniffer` interface. |
+| **Log File Manager** | Select, inspect, and switch between saved capture sessions on the fly. |
+| **Parser & DBC Decoder** | Search logs, strip noise, or automatically translate raw hex payloads into human-readable signals (RPM, Speed, Throttle) using standard `.dbc` profiles. |
+| **Replay Attacks** | Seamlessly stream recorded log sessions back onto the target CAN bus via `canplayer`. |
+| **Automated Fuzzer Suite** | Execute targeted fuzzing attacks, including Incremental Byte, Random Entropy, and UDS Service ID brute-forcing. |
+| **Precision Injection** | Transmit single custom-tailored CAN frames (`can_id#data`) directly to the bus. |
+| **Filter Management** | Build, save, and apply custom masking rules to isolate specific Electronic Control Units (ECUs). |
+
+---
+
+## 🎯 Use Cases
+
+* **Vehicular Penetration Testing:** On-field and off-field security assessments of in-vehicle networks.
+* **Diagnostics & Troubleshooting:** Analyzing error frames, diagnostic trouble codes (DTCs), and check-engine states.
+* **Research & Prototyping:** Gaining a hands-on understanding of the Controller Area Network (CAN) protocol and message structures.
+* **Hardware Demonstrations:** Rapid deployment for interactive vehicle control projects.
+
+---
+
+## 🛠️ Hardware Requirements
+
+1. **CAN Interface:** USB-to-CAN adapter (e.g., [8devices USB2CAN](https://www.8devices.com/products/usb2can_korlan) or any SocketCAN-compatible interface like CANable / CandleKey).
+2. **Compute Device:** Raspberry Pi (Recommended for portable field operations) or a Linux workstation.
+3. **Power Supply & Cabling:** Appropriate power source and an OBD-II to DB9 diagnostic cable mapping.
+
+---
+
+## ⚙️ Setup & Installation
+
+### 💻 Standard Linux Workstation
+1. Clone the repository:
+
+ ```bash
+   git clone https://github.com/her3ticAVI/TOUCANBus.git
+   cd TOUCANBus
+```
+
+2. Launch the utility with root privileges (required for SocketCAN interface binding):
+
+```bash
+  sudo python3 toucanbus.py
+```
+
+
+
+### 🥧 Headless Raspberry Pi Configuration
+
+1. Deploy a Raspberry Pi running Raspberry Pi OS.
+2. (Optional) Install [RaspAP](https://github.com/RaspAP/raspap-webgui) to handle remote network connectivity and web management.
+3. Clone the repository onto the device, connect your hardware interface to the vehicle's OBD-II port, and initiate the suite via SSH:
+```bash
+sudo python3 toucanbus.py
+
+```
+
+
+
+---
+
+## 🤝 Contributing
+
+Contributions, bug reports, and feature requests are welcome. Feel free to open an issue or submit a pull request for review.
+
+---
