@@ -1,8 +1,6 @@
 <div align="center">
 
-  <img src="./images/toucanbus.png" alt="TOUCANBus Logo" width="180" />
-
-  <h1>TOUCANBus</h1>
+  <img src="./images/toucan.png" alt="TOUCANBus Logo" width="380" />
 
   <p><strong>An advanced, streamlined automation suite for automotive penetration testing and SocketCAN interaction.</strong></p>
 
